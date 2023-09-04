@@ -1,5 +1,4 @@
 # ScienceReading_Downloader
-it can help you to save the pdf files that are on ScienceReading for free 
 
 用于<b>科学文库</b>公开阅读pdf文件下载保存
 
