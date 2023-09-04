@@ -1,5 +1,4 @@
 # ScienceReading_Downloader
-<h1>Description</h1>
 用于<b>科学文库</b>公开阅读pdf文件下载保存
 
 <h1>Usage</h1>
