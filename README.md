@@ -1,7 +1,10 @@
 # ScienceReading_Downloader
 it can help you to save the pdf files that are on ScienceReading for free 
 
+用于<h1>科学文库</h1>公开阅读pdf文件下载保存
+
 使用方法: 复制链接中id参数到工具
+
 例如中https://book.sciencereading.cn/shop/book/Booksimple/onlineRead.do?id=B7334E710269B4CBB86737E792EB72162000&readMark=0
 Id为：B7334E710269B4CBB86737E792EB72162000
 
