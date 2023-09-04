@@ -1,7 +1,8 @@
 import requests
 import os
-import time
 from PIL import Image
+from lxml import etree
+import json
 
 
 def combine_imgs_pdf(folder_path, pdf_file_path):
@@ -19,6 +20,7 @@ def combine_imgs_pdf(folder_path, pdf_file_path):
         if 'png' in file or 'jpg' in file:
             png_files.append(folder_path + "/"+file)
     png_files.sort()
+    #print(png_files)
     output = Image.open(png_files[0])
     png_files.pop(0)
     for file in png_files:
@@ -31,6 +33,7 @@ def combine_imgs_pdf(folder_path, pdf_file_path):
 
 
 def img_get(file_id, num=0, pixel=100):
+    global pagenum_len
     cookies = {
         'JSESSIONID': 'fogsowdtslb81e7ru5dy2xmlw',
     }
@@ -55,47 +58,70 @@ def img_get(file_id, num=0, pixel=100):
         'accessToken': 'accessToken',
         'formMode': 'true',
     }
-    print(
-        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}')
+    '''print(
+        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}')'''
     response = requests.get(
         f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', params=params, cookies=cookies, headers=headers)
     try:
         if response.status_code == 200:
-            while('error' in response.text or response.status_code != 200):
+            if ('error' in response.text or response.status_code != 200):
                 print("获取图片异常，正在重试...")
-                response = requests.get(
-        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', params=params, cookies=cookies, headers=headers)
+                while ('error' in response.text or response.status_code != 200):
+                    response = requests.get(
+                    f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', params=params, cookies=cookies, headers=headers)
+                
             save_path = "."
             if not os.path.exists(f'{save_path}\\{file_id}'):
                 os.mkdir(f'{save_path}\\{file_id}')
-            with open(f'{save_path}\\{file_id}\\{num}.png', 'wb') as img:
+            with open(f'{save_path}\\{file_id}\\{str(num + 1).zfill(pagenum_len)}.png', 'wb') as img:
                 img.write(response.content)
                 print(f'第{num + 1}页图片，保存成功')
         else:
             print('获取文件失败')
     except:
-        print("出现异常")
+        print("合并出现异常")
 
 
-def Crawler(file_id, end, start=0, pixel=100):
-    try:
-        print("开始爬取图片...")
-        for i in range(int(start), int(end) + 1):
-            print(f'正在获取第{i + 1}页图片...')
-            accessToken()
-            img_get(file_id=file_id, num=i, pixel=pixel)
-            time.sleep(1)
-        print("爬取完成，自动合并pdf...")
-        folder = f'./{file_id}'
-        pdfFile = folder + '/' + f'{file_id}.pdf'
-        combine_imgs_pdf(folder, pdfFile)
-    except:
-        print('合并失败')
+def book_name(id):
 
-
-def accessToken():
     headers = {
-        'Accept': '*/*',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'cookie': 'JSESSIONID=471DC9810199EEB610AF83B8D2D840AB',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+    }
+
+    params = {
+        'id': id,
+    }
+
+    response = requests.get(
+        'https://book.sciencereading.cn/shop/book/Booksimple/show.do', params=params, headers=headers)
+    page = etree.HTML(response.text)
+    print(response.text)
+    name = page.xpath(
+        '/html/body/div[1]/div/div/div/div[1]/div[2]/div[1]/span/b[1]/text()')
+    unable_str = ['\\', '/', ':', '*', '?', '"', "<", ">", "|"]
+    print("获取到书名:"+name)
+    for i in name:
+        if i in unable_str:
+            name = name.replace(i, '_',)
+    return name
+
+
+def PageNum_get(file_id):
+    headers = {
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8',
         'Connection': 'keep-alive',
         'Origin': 'https://book.sciencereading.cn',
@@ -108,15 +134,31 @@ def accessToken():
         'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"',
+        'x-auth-doc': '',
     }
 
     params = {
-        'accessToken': 'accessToken',
-        'formMode': 'true',
+        'language': 'zh-CN',
     }
 
-    response = requests.get(
-        'https://wkobwp.sciencereading.cn/asserts/6ebba527a2ce4224b6aa65f532cd0925/image/0/100', params=params, headers=headers)
+    response = requests.get('https://wkobwp.sciencereading.cn/asserts/' +
+                            file_id+'/manifest', params=params, headers=headers)
+    json1 = json.loads(response.json()['docinfo'])
+    return json1['PageCount']
+
+
+def Crawler(file_id, end, start=0, pixel=100):
+    try:
+        print("开始爬取图片...")
+        for i in range(int(start), int(end) + 1):
+            print(f'正在获取第{i + 1}页图片...')
+            img_get(file_id=file_id, num=i, pixel=pixel)
+        print("爬取完成，自动合并pdf...")
+        folder = f'./{file_id}'
+        pdfFile = folder + '/' + f'{file_id}.pdf'
+        combine_imgs_pdf(folder, pdfFile)
+    except:
+        print('获取图片发生异常')
 
 
 def Id_convert(id):
@@ -168,20 +210,30 @@ def Painting():
 
 if __name__ == '__main__':
     Painting()
+
     file_id = input('请输入文章Id:')
-    try:
-        print('正在解析id...')
-        result = Id_convert(file_id)
-        if result != 'null':
-            file_id = result
-            start = input('请输入开始序号(从0开始)：')
-            end = input('请输入结束序号：')
-            while (not start.isdigit() or not start.isdigit() or int(start) > int(end)):
-                start = input('序号输入有误,请输入开始序号(从0开始)：')
-                end = input('请输入结束序号：')
-            Crawler(file_id=file_id, end=end, start=start,pixel="200")
-            os.system('pause')
+    print('正在解析id...')
+    result = Id_convert(file_id)
+    pagenum = PageNum_get(result)
+    if pagenum != '0':
+        print("获取到页数:", pagenum)
+        pagenum_len = len(str(pagenum))
+    # file_name = book_name(id)
+    if result != 'null':
+        file_id = result
+        x = input('是否下载全书(y/n):')
+        while(x.upper().strip() != 'Y' and x.upper().strip() != 'N'):
+             x = input('输入有误,重新选择是否下载全书(y/n):')
+        if x.upper() == 'Y':
+            start = '1'
+            end = pagenum
         else:
-            print('解析Id出错!')
-    except:
-        print('运行异常!')
+            start = input('请输入开始页数(从1开始)：')
+            end = input('请输入结束页数：')
+            while (not start.isdigit() or not start.isdigit() or int(start) > int(end)):
+                start = input('序号输入有误,请输入开始页数(从1开始)：')
+                end = input('请输入结束页数：')
+        Crawler(file_id=file_id, end=str(int(end) - 1), start=str(int(start) - 1), pixel="200")
+        os.system('pause')
+    else:
+        print('解析Id出错!')
