@@ -1,5 +1,5 @@
 # ScienceReading_Downloader
-用于<b>科学文库</b>公开阅读pdf文件下载保存 可突破试读限制
+用于<b>[科学文库](https://book.sciencereading.cn)</b>公开阅读pdf文件下载保存 可突破试读限制
 
 <h1>Usage</h1>
 复制链接中id参数到工具
