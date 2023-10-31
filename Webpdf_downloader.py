@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 from PIL import Image
 from lxml import etree
 import json
@@ -35,7 +36,7 @@ def combine_imgs_pdf(folder_path, pdf_file_path):
 def img_get(file_id, num=0, pixel=100):
     global pagenum_len
     cookies = {
-        'JSESSIONID': 'fogsowdtslb81e7ru5dy2xmlw',
+        'JSESSIONID': '',
     }
 
     headers = {
@@ -48,27 +49,21 @@ def img_get(file_id, num=0, pixel=100):
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
         'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"',
     }
 
-    params = {
-        'accessToken': 'accessToken',
-        'formMode': 'true',
-    }
-    '''print(
-        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}')'''
     response = requests.get(
-        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', params=params, cookies=cookies, headers=headers)
+        f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', cookies=cookies, headers=headers)
     try:
         if response.status_code == 200:
             if ('error' in response.text or response.status_code != 200):
                 print("获取图片异常，正在重试...")
                 while ('error' in response.text or response.status_code != 200):
                     response = requests.get(
-                    f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', params=params, cookies=cookies, headers=headers)
+                    f'https://wkobwp.sciencereading.cn/asserts/{file_id}/image/{num}/{pixel}', cookies=cookies, headers=headers)
                 
             save_path = "."
             if not os.path.exists(f'{save_path}\\{file_id}'):
@@ -93,7 +88,7 @@ def book_name(id):
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
-        'cookie': 'JSESSIONID=471DC9810199EEB610AF83B8D2D840AB',
+        'cookie': 'JSESSIONID=',
         'Upgrade-Insecure-Requests': '1',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
         'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
@@ -143,6 +138,7 @@ def PageNum_get(file_id):
 
     response = requests.get('https://wkobwp.sciencereading.cn/asserts/' +
                             file_id+'/manifest', params=params, headers=headers)
+    
     json1 = json.loads(response.json()['docinfo'])
     return json1['PageCount']
 
@@ -186,22 +182,47 @@ def Id_convert(id):
 
     response = requests.post(
         'https://wkobwp.sciencereading.cn/api/file/add', headers=headers, data=data)
-    if response.status_code == 200:
-        res = response.json()['result']
-        print(f'解析成功,真实id:{res}')
-        return res
+    
+    res = response.json()['result']
+
+    if response.status_code == 200 :
+        if res != "OutOfFileSizeLimit":
+            print(f'解析成功,真实id:{res}')
+            return res
+        else:
+            print("当前文库文件过大，请等候解析...")
+
+            data = {
+                'filetype': 'http',
+                'zooms': '-1,100',
+                'tileRender': 'false',
+                'fileuri': '{"params":{"userName":"Guest","userId":"","file":"http://159.226.241.32:81/' + id + '.pdf"}}',
+                'pdfcache': 'true',
+                'callback': '',
+            }
+
+            response2 = requests.post(f'https://wkobwp.sciencereading.cn/spi/v2/doc/pretreat?r={int(time.time()*1000)}', headers=headers, data=data)
+            if response2.json()["resultCode"] == "1":
+                taskid = response2.json()["resultBody"]["taskid"]
+                response3 = requests.get(f'https://wkobwp.sciencereading.cn/api/v2/task/{taskid}/query?r={int(time.time()*1000)}', headers=headers)
+                while "task in process" in response3.text:
+                    response3 = requests.get(f'https://wkobwp.sciencereading.cn/api/v2/task/{taskid}/query?r={int(time.time()*1000)}', headers=headers)
+                print(f"解析成功,真实id:{response3.json()['resultBody']['uuid']}")
+                return response3.json()['resultBody']['uuid']
+            else:
+                return 'null'
     else:
         return 'null'
 
 
 def Painting():
     print('''
-    __    __    ___  ____   ____  ___    _____ 
+     __    __    ___  ____   ____  ___    _____ 
     |  |__|  |  /  _]|    \ |    \|   \  |     |
     |  |  |  | /  [_ |  o  )|  o  )    \ |   __|
     |  |  |  ||    _]|     ||   _/|  D  ||  |_  
     |  `  '  ||   [_ |  O  ||  |  |     ||   _] 
-     \      / |     ||     ||  |  |     ||  |   By 顾笙 v1.1
+     \      / |     ||     ||  |  |     ||  |   By 顾笙 v1.2
       \_/\_/  |_____||_____||__|  |_____||__|   科学文库WebPdf下载助手
                                                 
 
@@ -233,7 +254,7 @@ if __name__ == '__main__':
             while (not start.isdigit() or not start.isdigit() or int(start) > int(end)):
                 start = input('序号输入有误,请输入开始页数(从1开始)：')
                 end = input('请输入结束页数：')
-        Crawler(file_id=file_id, end=str(int(end) - 1), start=str(int(start) - 1), pixel="200")
+        Crawler(file_id=file_id, end=str(int(end) - 1), start=str(int(start) - 1), pixel="100") #如果一直下载图片失败 尝试修改pixel数值
         os.system('pause')
     else:
         print('解析Id出错!')
