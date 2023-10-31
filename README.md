@@ -1,6 +1,9 @@
 # ScienceReading_Downloader
 用于<b>[科学文库](https://book.sciencereading.cn)</b>公开阅读pdf文件下载保存 可突破试读限制
 
+<h1>Update</h1>
+v1.2 优化程序，支持大文件文库解析下载
+
 <h1>Usage</h1>
 复制链接中id参数到工具
 
